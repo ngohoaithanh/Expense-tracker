@@ -13,7 +13,7 @@ import com.hoaithanh.expense_tracker.data.local.entity.Expense;
 
 // 1. Tăng version lên 2 vì ta thêm Table mới
 // 2. Thêm class Category vào mảng entities
-@Database(entities = {Expense.class, Category.class}, version = 2)
+@Database(entities = {Expense.class, Category.class}, version = 4)
 public abstract class AppDatabase extends RoomDatabase {
 
     private static AppDatabase instance;

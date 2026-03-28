@@ -1,6 +1,7 @@
 package com.hoaithanh.expense_tracker.ui.home;
 
 import android.content.Intent;
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -56,12 +57,21 @@ public class HomeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         if (holder instanceof DateViewHolder) {
             DateViewHolder dateHolder = (DateViewHolder) holder;
 
-            // Hiển thị ngày
             dateHolder.tvDate.setText(item.getDateHeader());
 
-            // Định dạng và hiển thị tổng tiền
             NumberFormat vnFormat = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
-            dateHolder.tvTotal.setText(vnFormat.format(item.getTotalAmount()));
+            long totalAmount = item.getTotalAmount();
+
+            dateHolder.tvTotal.setText(vnFormat.format(totalAmount));
+
+            // Đổi màu: Nếu tổng thu > chi (số dương) -> Màu xanh, ngược lại -> Màu đỏ
+            if (totalAmount > 0) {
+                dateHolder.tvTotal.setTextColor(Color.parseColor("#4CAF50")); // Xanh
+            } else if (totalAmount < 0) {
+                dateHolder.tvTotal.setTextColor(Color.parseColor("#F44336")); // Đỏ
+            } else {
+                dateHolder.tvTotal.setTextColor(Color.GRAY); // Bằng 0 thì màu xám
+            }
         } else if (holder instanceof ExpenseViewHolder) {
             Expense expense = item.getExpense();
             ExpenseViewHolder expHolder = (ExpenseViewHolder) holder;
@@ -70,14 +80,36 @@ public class HomeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             expHolder.chipCategory.setText(expense.category);
 
             NumberFormat vnFormat = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
-            expHolder.tvAmount.setText(vnFormat.format(expense.amount));
 
-            Glide.with(expHolder.itemView.getContext())
-                    .load(expense.imagePath)
-                    .centerCrop()
-                    .placeholder(R.drawable.ic_camera)
-                    .error(R.drawable.bg_placeholder_expense)
-                    .into(expHolder.ivThumbnail);
+            if (expense.type == 1) { // Thu nhập (Income)
+                expHolder.tvAmount.setText("+ " + vnFormat.format(expense.amount));
+                expHolder.tvAmount.setTextColor(Color.parseColor("#4CAF50")); // Màu Xanh
+            } else { // Chi tiêu (Expense)
+                expHolder.tvAmount.setText("- " + vnFormat.format(expense.amount));
+                expHolder.tvAmount.setTextColor(Color.parseColor("#F44336")); // Màu Đỏ
+            }
+
+            // 1. Xác định ảnh mặc định dựa trên Loại (Type)
+//            int defaultImageId = (expense.type == 1) ? R.drawable.income : R.drawable.bg_placeholder_expense;
+
+            int defaultImageId = (expense.type == 1) ?
+                    R.drawable.item_income_visual :  // Nền xanh + Túi tiền PNG
+                    R.drawable.item_expense_visual;  // Nền xám + Camera
+            if (expense.imagePath == null || expense.imagePath.isEmpty()) {
+                // NẾU KHÔNG CÓ ẢNH: Load thẳng ảnh mặc định, không cần placeholder/error phức tạp
+                Glide.with(expHolder.itemView.getContext())
+                        .load(defaultImageId) // Load trực tiếp Resource ID
+                        .centerCrop()
+                        .into(expHolder.ivThumbnail);
+            } else {
+                // NẾU CÓ ẢNH: Load từ bộ nhớ máy
+                Glide.with(expHolder.itemView.getContext())
+                        .load(expense.imagePath)
+                        .centerCrop()
+                        .placeholder(defaultImageId)
+                        .error(defaultImageId)
+                        .into(expHolder.ivThumbnail);
+            }
 
             expHolder.itemView.setOnClickListener(v -> {
                 Intent intent = new Intent(v.getContext(), DetailActivity.class);

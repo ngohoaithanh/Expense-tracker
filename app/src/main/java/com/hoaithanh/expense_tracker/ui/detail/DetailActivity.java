@@ -76,12 +76,6 @@ public class DetailActivity extends AppCompatActivity {
                 SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault());
                 tvDate.setText(sdf.format(new Date(expense.timestamp)));
 
-                // Load ảnh bằng Glide
-//                Glide.with(this)
-//                        .load(expense.imagePath)
-//                        .placeholder(R.drawable.ic_camera)
-//                        .error(R.drawable.error_image)
-//                        .into(ivFullPhoto);
                 if (expense.imagePath != null && !expense.imagePath.isEmpty()) {
 
                     // Senior Tip: Kiểm tra nếu là ảnh mặc định (Skip Photo)

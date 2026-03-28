@@ -1,6 +1,7 @@
 package com.hoaithanh.expense_tracker.ui.home;
 
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
@@ -37,6 +38,7 @@ public class HomeActivity extends AppCompatActivity {
     private View layoutEmpty;
     private AppDatabase db;
     private ExtendedFloatingActionButton fabAdd;
+    private TextView tvBalance, tvTotalIncome, tvTotalExpense;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -118,6 +120,10 @@ public class HomeActivity extends AppCompatActivity {
         tvTotalMonth = findViewById(R.id.tvTotalMonth);
         layoutEmpty = findViewById(R.id.layoutEmpty);
         fabAdd = findViewById(R.id.fabAdd);
+
+        tvBalance = findViewById(R.id.tvBalance);
+        tvTotalIncome = findViewById(R.id.tvTotalIncome);
+        tvTotalExpense = findViewById(R.id.tvTotalExpense);
     }
 
     private void observeData() {
@@ -152,10 +158,20 @@ public class HomeActivity extends AppCompatActivity {
         Map<String, Long> dateTotals = new HashMap<>();
         SimpleDateFormat compareFmt = new SimpleDateFormat("yyyyMMdd", Locale.getDefault());
 
+//        for (Expense e : expenseList) {
+//            String key = compareFmt.format(new Date(e.timestamp));
+//            long current = dateTotals.getOrDefault(key, 0L);
+//            dateTotals.put(key, current + (long)e.amount); // Ép kiểu nếu e.amount là double
+//        }
+
         for (Expense e : expenseList) {
             String key = compareFmt.format(new Date(e.timestamp));
-            long current = dateTotals.getOrDefault(key, 0L);
-            dateTotals.put(key, current + (long)e.amount); // Ép kiểu nếu e.amount là double
+            long currentNet = dateTotals.getOrDefault(key, 0L);
+
+            if (e.type == 1) currentNet += (long)e.amount; // Thu thì cộng
+            else currentNet -= (long)e.amount; // Chi thì trừ
+
+            dateTotals.put(key, currentNet);
         }
 
         // 2. Tạo danh sách ListItem
@@ -179,28 +195,60 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void calculateTotals(List<Expense> expenses) {
-        double todaySum = 0;
-        double monthSum = 0;
+        double totalIncome = 0;
+        double totalExpense = 0;
+        double todayNet = 0; // Để hiện ở dòng "Hôm nay: ..."
+        double monthNet = 0; // Để hiện ở dòng "Tháng này: ..."
 
-        long now = System.currentTimeMillis();
-        // Senior Tip: Sử dụng Calendar để check ngày/tháng chính xác
         Calendar cal = Calendar.getInstance();
         int currentDay = cal.get(Calendar.DAY_OF_YEAR);
         int currentMonth = cal.get(Calendar.MONTH);
+        int currentYear = cal.get(Calendar.YEAR);
 
         for (Expense e : expenses) {
             cal.setTimeInMillis(e.timestamp);
-            if (cal.get(Calendar.DAY_OF_YEAR) == currentDay) {
-                todaySum += e.amount;
+
+            // 1. Tính Tổng Thu và Tổng Chi (Toàn bộ thời gian)
+            if (e.type == 1) {
+                totalIncome += e.amount;
+            } else {
+                totalExpense += e.amount;
             }
-            if (cal.get(Calendar.MONTH) == currentMonth) {
-                monthSum += e.amount;
+
+            // 2. Tính toán cho Hôm nay và Tháng này (Tính số dư Net)
+            if (cal.get(Calendar.YEAR) == currentYear) {
+                if (cal.get(Calendar.DAY_OF_YEAR) == currentDay) {
+                    if (e.type == 1) todayNet += e.amount; else todayNet -= e.amount;
+                }
+                if (cal.get(Calendar.MONTH) == currentMonth) {
+                    if (e.type == 1) monthNet += e.amount; else monthNet -= e.amount;
+                }
             }
         }
 
-        NumberFormat vnFormat = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
-        tvTotalToday.setText(vnFormat.format(todaySum));
-        tvTotalMonth.setText(vnFormat.format(monthSum));
+        // 3. Tính số dư tổng (Balance)
+        double balance = totalIncome - totalExpense;
 
+        // 4. Định dạng tiền tệ VND
+        NumberFormat vnFormat = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
+
+        // Đổ dữ liệu lên Card Summary
+        tvBalance.setText(vnFormat.format(balance));
+        tvTotalIncome.setText(vnFormat.format(totalIncome));
+        tvTotalExpense.setText(vnFormat.format(totalExpense));
+
+        // Cập nhật 2 dòng nhỏ bên dưới
+        tvTotalToday.setText("Hôm nay: " + vnFormat.format(todayNet));
+        tvTotalMonth.setText("Tháng này: " + vnFormat.format(monthNet));
+
+        // --- SENIOR UX: Đổi màu theo trạng thái tài chính ---
+
+        // Số dư tổng: Đỏ nếu âm, Xanh Primary nếu dương
+        tvBalance.setTextColor(balance >= 0 ?
+                getResources().getColor(R.color.primary) : Color.RED);
+
+        // Dòng Today/Month: Đỏ nếu chi nhiều hơn thu
+        tvTotalToday.setTextColor(todayNet >= 0 ? Color.GRAY : Color.RED);
+        tvTotalMonth.setTextColor(monthNet >= 0 ? Color.GRAY : Color.RED);
     }
 }

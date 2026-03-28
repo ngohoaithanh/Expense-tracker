@@ -23,4 +23,12 @@
     <color name="on_primary">#FFFFFF</color>
     <color name="primary_container">#C8E6C9</color>
 
+    <color name="income_chip_bg">#E8F5E9</color>
+
+    <color name="income_text">#2E7D32</color>
+
+    <color name="income_primary">#C8E6C9</color>
+
+    <color name="expense_chip_bg">#FFEBEE</color>
+    <color name="expense_text">#C62828</color>
 </resources>

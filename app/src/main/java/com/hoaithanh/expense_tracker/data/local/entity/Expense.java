@@ -13,12 +13,14 @@ public class Expense {
     public String category;
     public long timestamp;
     public String imagePath; // Lưu path: /storage/emulated/0/.../img_123.jpg
+    public int type; // 0: Expense, 1: Income
 
-    public Expense(String title, double amount, String category, long timestamp, String imagePath) {
+    public Expense(String title, double amount, long timestamp, String category, String imagePath, int type) {
         this.title = title;
         this.amount = amount;
-        this.category = category;
         this.timestamp = timestamp;
+        this.category = category;
         this.imagePath = imagePath;
+        this.type = type;
     }
 }

@@ -91,20 +91,47 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:background="@android:color/transparent"
-                    android:hint="0.00"
+                    android:hint="0"
                     android:inputType="numberDecimal"
                     android:textColor="@color/primary"
                     android:textSize="42sp"
                     android:textStyle="bold"
                     android:gravity="center" />
 
+                <com.google.android.material.button.MaterialButtonToggleGroup
+                    android:id="@+id/toggleTransactionType"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    app:singleSelection="true"
+                    app:selectionRequired="true"
+                    app:checkedButton="@+id/btnTypeExpense">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnTypeExpense"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Chi tiêu" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnTypeIncome"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Thu nhập" />
+
+                </com.google.android.material.button.MaterialButtonToggleGroup>
+
                 <EditText
-                    android:textStyle="italic"
+                    android:textStyle="normal"
                     android:textColorHint="@color/primary"
                     android:id="@+id/etTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="What did you buy?"
+                    android:hint="Nội dung"
                     android:textColor="@color/on_surface"
                     android:background="@android:color/transparent"
                     android:layout_marginTop="16dp"

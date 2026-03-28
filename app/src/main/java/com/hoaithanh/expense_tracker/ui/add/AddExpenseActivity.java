@@ -2,6 +2,7 @@ package com.hoaithanh.expense_tracker.ui.add;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Bundle;
@@ -23,6 +24,7 @@ import androidx.core.content.ContextCompat;
 
 import com.bumptech.glide.Glide;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.hoaithanh.expense_tracker.R;
@@ -37,6 +39,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -46,6 +50,16 @@ public class AddExpenseActivity extends AppCompatActivity {
     private EditText etAmount, etTitle;
     private ChipGroup chipGroup;
     private AppDatabase database;
+    private MaterialButtonToggleGroup toggleTransactionType; // KHAI BÁO BIẾN MỚI
+    private int currentType = 0;
+
+    // Danh sách danh mục cho Chi tiêu
+    private String[] expenseCategories;
+    private String[] incomeCategories;
+    private List<String> expenseList = new ArrayList<>();
+    private List<String> incomeList = new ArrayList<>();
+
+    private String selectedCategory = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,6 +68,7 @@ public class AddExpenseActivity extends AppCompatActivity {
         database = AppDatabase.getInstance(this);
         ivPreview = findViewById(R.id.ivPreview);
         etAmount = findViewById(R.id.etAmount);
+        toggleTransactionType = findViewById(R.id.toggleTransactionType);
         etTitle = findViewById(R.id.etTitle);
         chipGroup = findViewById(R.id.chipGroupCategory);
         MaterialButton btnBack = findViewById(R.id.btnBack);
@@ -67,7 +82,28 @@ public class AddExpenseActivity extends AppCompatActivity {
             }
         });
 
-        setupCategoryChips();
+        expenseCategories = getResources().getStringArray(R.array.expense_categories);
+        incomeCategories = getResources().getStringArray(R.array.income_categories);
+        loadCategoriesFromDb();
+
+        // 2. Lắng nghe đổi Thu/Chi
+        toggleTransactionType.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
+            if (isChecked) {
+                if (checkedId == R.id.btnTypeIncome) {
+                    currentType = 1;
+                    // DÙNG LIST THAY VÌ ARRAY TĨNH
+                    populateChips(incomeList.toArray(new String[0]), 1);
+                    updateUIForIncome();
+                } else {
+                    currentType = 0;
+                    // DÙNG LIST THAY VÌ ARRAY TĨNH
+                    populateChips(expenseList.toArray(new String[0]), 0);
+                    updateUIForExpense();
+                }
+            }
+        });
+        populateChips(expenseList.toArray(new String[0]), 0);
+
 
         // Nhận tín hiệu từ Home: Có ép mở Camera không?
         boolean autoCamera = getIntent().getBooleanExtra("AUTO_CAMERA", true);
@@ -82,7 +118,7 @@ public class AddExpenseActivity extends AppCompatActivity {
             checkCameraPermission();
         } else {
             // Nếu Long Click (autoCamera = false), hiện ảnh mặc định
-            ivPreview.setImageResource(R.drawable.bg_placeholder_expense);
+            ivPreview.setImageResource(R.drawable.bg_placeholder_expense2);
         }
         // Nút chọn từ Gallery (Thêm vào XML ở bước sau)
         findViewById(R.id.btnGallery).setOnClickListener(v -> {
@@ -133,6 +169,97 @@ public class AddExpenseActivity extends AppCompatActivity {
         });
     }
 
+    private void loadCategoriesFromDb() {
+        new Thread(() -> {
+            // 1. Lấy danh mục Chi tiêu từ DB
+            List<Category> dbExpenses = database.categoryDao().getCategoriesByType(0);
+            if (dbExpenses.isEmpty()) {
+                // Nếu DB trống, nạp mặc định từ strings.xml vào DB và List
+                String[] defaults = getResources().getStringArray(R.array.expense_categories);
+                for (String s : defaults) {
+                    database.categoryDao().insert(new Category(s, 0));
+                    expenseList.add(s);
+                }
+            } else {
+                for (Category c : dbExpenses) expenseList.add(c.name);
+            }
+
+            // 2. Lấy danh mục Thu nhập từ DB
+            List<Category> dbIncomes = database.categoryDao().getCategoriesByType(1);
+            if (dbIncomes.isEmpty()) {
+                String[] defaults = getResources().getStringArray(R.array.income_categories);
+                for (String s : defaults) {
+                    database.categoryDao().insert(new Category(s, 1));
+                    incomeList.add(s);
+                }
+            } else {
+                for (Category c : dbIncomes) incomeList.add(c.name);
+            }
+
+            // 3. Sau khi nạp xong vào List, hiển thị bộ Chip mặc định (Chi tiêu)
+            runOnUiThread(() -> populateChips(expenseList.toArray(new String[0]), 0));
+        }).start();
+    }
+
+    private void populateChips(String[] categories, int type) {
+        chipGroup.removeAllViews(); // Xóa sạch để không bị lẫn Thu/Chi
+
+        for (String cat : categories) {
+            Chip chip = new Chip(this);
+            chip.setText(cat);
+            chip.setCheckable(true);
+            chip.setClickable(true);
+
+            // Thiết lập màu sắc dựa trên Type
+            if (type == 1) { // Thu nhập
+                chip.setChipBackgroundColorResource(R.color.income_chip_bg);
+                chip.setTextColor(getResources().getColor(R.color.income_text));
+            } else { // Chi tiêu
+                chip.setChipBackgroundColorResource(R.color.expense_chip_bg);
+                chip.setTextColor(getResources().getColor(R.color.expense_text));
+            }
+
+            chip.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                if (isChecked) {
+                    selectedCategory = cat;
+                }
+            });
+            chipGroup.addView(chip);
+        }
+
+        // Tự động chọn Chip đầu tiên để tránh lỗi chưa chọn danh mục
+        if (chipGroup.getChildCount() > 0) {
+            ((Chip) chipGroup.getChildAt(0)).setChecked(true);
+            selectedCategory = categories[0];
+        }
+
+        createAddButtonChip(type);
+    }
+
+    private void addPlusButton(int type) {
+        Chip addChip = new Chip(this);
+        addChip.setText("+");
+        addChip.setChipBackgroundColorResource(R.color.secondary_container);
+        addChip.setOnClickListener(v -> {
+            // Gọi Dialog thêm danh mục ở đây nếu cần
+            Toast.makeText(this, "Tính năng thêm danh mục đang phát triển", Toast.LENGTH_SHORT).show();
+        });
+        chipGroup.addView(addChip);
+    }
+
+    // --- CÁC HÀM TINH CHỈNH UI (UX Bonus) ---
+    private void updateUIForIncome() {
+        // Ví dụ: Đổi màu số tiền thành xanh lá cho tiền vào
+        etAmount.setTextColor(Color.GREEN);
+        // Sau này chúng ta sẽ đổi danh sách Chip tại đây
+    }
+
+    private void updateUIForExpense() {
+        // Đổi màu số tiền thành đỏ cho tiền ra
+        etAmount.setTextColor(Color.RED);
+        // Sau này chúng ta sẽ đổi danh sách Chip tại đây
+    }
+
     private String saveImageToInternalStorage(Uri uri) {
         try {
             // Tạo tên file duy nhất
@@ -175,33 +302,6 @@ public class AddExpenseActivity extends AppCompatActivity {
                 .show();
     }
 
-    private void setupCategoryChips() {
-        chipGroup.removeAllViews();
-
-        // Chạy trong Background Thread (vì Room không cho chạy Main Thread)
-        new Thread(() -> {
-            // 1. Kiểm tra Database có Category chưa
-            List<Category> list = database.categoryDao().getAllCategories();
-
-            if (list.isEmpty()) {
-                // Nếu trống, nạp mặc định từ strings.xml vào DB
-                String[] defaults = getResources().getStringArray(R.array.default_categories);
-                for (String s : defaults) {
-                    database.categoryDao().insert(new Category(s));
-                }
-                list = database.categoryDao().getAllCategories();
-            }
-
-            // 2. Quay lại UI Thread để vẽ Chip
-            List<Category> finalList = list;
-            runOnUiThread(() -> {
-                for (Category cat : finalList) {
-                    createChip(cat.name, false);
-                }
-                createAddButtonChip(); // Luôn có nút + ở cuối
-            });
-        }).start();
-    }
 
     private void createChip(String text, boolean isSelected) {
         Chip chip = new Chip(this);
@@ -217,51 +317,44 @@ public class AddExpenseActivity extends AppCompatActivity {
         chipGroup.addView(chip);
     }
 
-    private void createAddButtonChip() {
+    private void createAddButtonChip(int type) {
         Chip addChip = new Chip(this);
         addChip.setText("Thêm");
-        addChip.setChipIcon(ContextCompat.getDrawable(this, R.drawable.ic_add)); // Nếu bạn có icon add
+        addChip.setChipIcon(ContextCompat.getDrawable(this, R.drawable.ic_add));
         addChip.setChipBackgroundColorResource(R.color.secondary_container);
 
         addChip.setOnClickListener(v -> {
-            // Kiểm tra giới hạn 20 chip trước khi cho phép thêm
-            if (chipGroup.getChildCount() > 20) {
-                Toast.makeText(this, "Tối đa 20 danh mục thôi nhé!", Toast.LENGTH_SHORT).show();
-            } else {
-                showAddCategoryDialog();
-            }
+            // Truyền currentType vào đây
+            showAddCategoryDialog(type);
         });
 
         chipGroup.addView(addChip);
     }
 
-    private void showAddCategoryDialog() {
+    private void showAddCategoryDialog(int type) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Thêm danh mục mới");
-
-        // Tạo một EditText để người dùng nhập tên
         final EditText input = new EditText(this);
         input.setHint("Ví dụ: 🐱 Thú cưng");
-        input.setPadding(50, 40, 50, 40);
         builder.setView(input);
 
         builder.setPositiveButton("Thêm", (dialog, which) -> {
             String newCatName = input.getText().toString().trim();
             if (!newCatName.isEmpty()) {
-                new Thread(() -> {
-                    // 1. Lưu vào Database vật lý
-                    database.categoryDao().insert(new Category(newCatName));
+                if (type == 1) incomeList.add(newCatName);
+                else expenseList.add(newCatName);
 
-                    // 2. Cập nhật lại giao diện
-                    runOnUiThread(() -> {
-                        // Chèn vào trước nút "+"
-                        createChipAt(newCatName, chipGroup.getChildCount() - 1);
-                    });
+                new Thread(() -> {
+                    // LƯU KÈM TYPE VÀO DATABASE
+                    database.categoryDao().insert(new Category(newCatName, type));
                 }).start();
+
+                // Vẽ lại Chip
+                if (type == 1) populateChips(incomeList.toArray(new String[0]), 1);
+                else populateChips(expenseList.toArray(new String[0]), 0);
             }
         });
-
-        builder.setNegativeButton("Hủy", (dialog, which) -> dialog.cancel());
+        builder.setNegativeButton("Hủy", null);
         builder.show();
     }
 
@@ -293,14 +386,6 @@ public class AddExpenseActivity extends AppCompatActivity {
                                 .into(ivPreview);
                         Toast.makeText(this, "Đã chọn ảnh từ thư viện", Toast.LENGTH_SHORT).show();
                     }
-
-                    // Hiển thị lên giao diện ngay lập tức
-//                    Glide.with(this)
-//                            .load(uri)
-//                            .centerCrop()
-//                            .into(ivPreview);
-//
-//                    Toast.makeText(this, "Đã chọn ảnh từ thư viện", Toast.LENGTH_SHORT).show();
                 }
             });
 
@@ -363,12 +448,16 @@ public class AddExpenseActivity extends AppCompatActivity {
 
     private void saveExpense() {
         String amountStr = etAmount.getText().toString();
-        if (amountStr.isEmpty()) return;
+        if (amountStr.isEmpty()) {
+            etAmount.setError("Vui lòng nhập số tiền!");
+            return;
+        }
 
         // Xóa tất cả ký tự không phải là số (Regex: [^0-9])
         String cleanAmount = amountStr.replaceAll("[^0-9]", "");
         double amount = Double.parseDouble(cleanAmount);
         String title = etTitle.getText().toString();
+        int transactionType = currentType;
 
         // Cách lấy text của Chip đang chọn cực gọn:
         int checkedChipId = chipGroup.getCheckedChipId();
@@ -383,12 +472,18 @@ public class AddExpenseActivity extends AppCompatActivity {
             return;
         }
 
-        Expense expense = new Expense(title, amount, category,
-                System.currentTimeMillis(), currentPhotoPath);
+        Expense newRecord = new Expense(
+                title,
+                amount,
+                System.currentTimeMillis(),
+                category,
+                currentPhotoPath,
+                transactionType // LƯU THU/CHI VÀO DATABASE
+        );
 
         // Lưu vào Database (chạy trên thread riêng)
         new Thread(() -> {
-            AppDatabase.getInstance(this).expenseDao().insert(expense);
+            AppDatabase.getInstance(this).expenseDao().insert(newRecord);
             runOnUiThread(() -> {
                 Toast.makeText(this, "Saved!", Toast.LENGTH_SHORT).show();
                 // Senior Tip: Tạo hiệu ứng đóng màn hình mượt mà

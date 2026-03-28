@@ -1,11 +1,21 @@
 <resources>
-    <string name="app_name">Expense-tracker</string>
-    <string-array name="default_categories">
-        <item>🍕 Ăn uống</item>
-        <item>🏍 Di chuyển</item>
-        <item>🏠 Nhà cửa</item>
-        <item>🛒 Mua sắm</item>
-        <item>🎬 Giải trí</item>
-        <item>🏥 Sức khỏe</item>
+    <string name="app_name">Visual Expense</string>
+
+    <string-array name="expense_categories">
+        <item>Ăn uống</item>
+        <item>Di chuyển</item>
+        <item>Mua sắm</item>
+        <item>Giải trí</item>
+        <item>Hóa đơn</item>
+        <item>Khác</item>
+    </string-array>
+
+    <string-array name="income_categories">
+        <item>Lương</item>
+        <item>Thưởng</item>
+        <item>Tiền lãi</item>
+        <item>Bán đồ</item>
+        <item>Quà tặng</item>
+        <item>Freelance</item>
     </string-array>
 </resources>

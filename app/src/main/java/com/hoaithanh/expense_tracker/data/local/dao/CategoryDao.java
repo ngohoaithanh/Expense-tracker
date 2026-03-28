@@ -18,4 +18,7 @@ public interface CategoryDao {
 
     @Query("SELECT COUNT(*) FROM categories")
     int getCount();
+
+    @Query("SELECT * FROM categories WHERE type = :type")
+    List<Category> getCategoriesByType(int type);
 }
