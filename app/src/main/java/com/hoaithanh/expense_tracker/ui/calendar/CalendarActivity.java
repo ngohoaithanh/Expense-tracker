@@ -10,11 +10,14 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.hoaithanh.expense_tracker.R;
 import com.hoaithanh.expense_tracker.data.local.database.AppDatabase;
 import com.hoaithanh.expense_tracker.data.local.entity.Expense;
+import com.hoaithanh.expense_tracker.model.ListItem;
 import com.hoaithanh.expense_tracker.ui.home.HomeAdapter;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Locale;
 
 public class CalendarActivity extends AppCompatActivity {
     private HomeAdapter adapter;
@@ -25,7 +28,7 @@ public class CalendarActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_calendar);
 
-        db = AppDatabase.getDatabase(this);
+        db = AppDatabase.getInstance(this);
         adapter = new HomeAdapter();
 
         RecyclerView rv = findViewById(R.id.rvDailyExpenses);
@@ -44,21 +47,45 @@ public class CalendarActivity extends AppCompatActivity {
     }
 
     private void loadExpensesForDate(int year, int month, int day) {
-        // Logic lọc dữ liệu từ List tổng (Hoặc dùng DAO query theo range thời gian)
         db.expenseDao().getAllExpenses().observe(this, allExpenses -> {
             List<Expense> filtered = new ArrayList<>();
+            long dayTotal = 0; // Biến để cộng dồn tổng tiền của ngày được chọn
+
             Calendar target = Calendar.getInstance();
             target.set(year, month, day);
 
             for (Expense e : allExpenses) {
                 Calendar current = Calendar.getInstance();
                 current.setTimeInMillis(e.timestamp);
+
+                // Kiểm tra xem chi tiêu có thuộc ngày/tháng/năm đang chọn không
                 if (current.get(Calendar.YEAR) == year &&
                         current.get(Calendar.DAY_OF_YEAR) == target.get(Calendar.DAY_OF_YEAR)) {
                     filtered.add(e);
+                    dayTotal += (long) e.amount; // Cộng dồn vào tổng chi tiêu trong ngày
                 }
             }
-            adapter.setExpenses(filtered);
+
+            // Chuyển đổi sang List<ListItem> để khớp với HomeAdapter mới
+            List<ListItem> displayList = new ArrayList<>();
+
+            if (!filtered.isEmpty()) {
+                // 1. Định dạng ngày tháng (28/03/2026)
+                SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
+                String headerLabel = sdf.format(target.getTime());
+
+                // 2. Thêm Header chứa cả Ngày và Tổng tiền của ngày đó
+                // (Sử dụng Constructor mới: ListItem(String label, long total))
+                displayList.add(new ListItem(headerLabel, dayTotal));
+
+                // 3. Thêm danh sách các chi tiêu của ngày đó
+                for (Expense e : filtered) {
+                    displayList.add(new ListItem(e));
+                }
+            }
+
+            // Đẩy dữ liệu đã xử lý vào adapter
+            adapter.setExpenses(displayList);
         });
     }
 }

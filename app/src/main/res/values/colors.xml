@@ -8,11 +8,19 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <color name="primary">#4CAF50</color>
-    <color name="background">#121212</color>
-    <color name="surface">#1E1E1E</color>
-    <color name="on_surface">#FFFFFF</color>
+    <!--    <color name="primary">#4CAF50</color>-->
+    <color name="background">#C8E6C9</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="on_surface">#212121</color>
+    <color name="on_surface_variant">#757575</color>
     <color name="text_secondary">#B0B0B0</color>
     <color name="error">#FF5252</color>
+
+    <color name="secondary">#455A64</color> <color name="on_secondary">#FFFFFF</color>
+    <color name="secondary_container">#CFD8DC</color>
+
+    <color name="primary">#2E7D32</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="primary_container">#C8E6C9</color>
 
 </resources>

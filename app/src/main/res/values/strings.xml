@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">Expense-tracker</string>
+    <string-array name="default_categories">
+        <item>🍕 Ăn uống</item>
+        <item>🏍 Di chuyển</item>
+        <item>🏠 Nhà cửa</item>
+        <item>🛒 Mua sắm</item>
+        <item>🎬 Giải trí</item>
+        <item>🏥 Sức khỏe</item>
+    </string-array>
 </resources>

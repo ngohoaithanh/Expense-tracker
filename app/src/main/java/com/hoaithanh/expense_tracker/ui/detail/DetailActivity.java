@@ -63,7 +63,7 @@ public class DetailActivity extends AppCompatActivity {
         Chip chipCategory = findViewById(R.id.chipDetailCategory);
 
         // Truy vấn từ Database thông qua LiveData
-        AppDatabase.getDatabase(this).expenseDao().getExpenseById(id).observe(this, expense -> {
+        AppDatabase.getInstance(this).expenseDao().getExpenseById(id).observe(this, expense -> {
             if (expense != null) {
                 currentExpense = expense; // Gán vào biến toàn cục để dùng khi Xóa
 
@@ -77,10 +77,30 @@ public class DetailActivity extends AppCompatActivity {
                 tvDate.setText(sdf.format(new Date(expense.timestamp)));
 
                 // Load ảnh bằng Glide
-                Glide.with(this)
-                        .load(expense.imagePath)
-                        .placeholder(R.drawable.ic_camera)
-                        .into(ivFullPhoto);
+//                Glide.with(this)
+//                        .load(expense.imagePath)
+//                        .placeholder(R.drawable.ic_camera)
+//                        .error(R.drawable.error_image)
+//                        .into(ivFullPhoto);
+                if (expense.imagePath != null && !expense.imagePath.isEmpty()) {
+
+                    // Senior Tip: Kiểm tra nếu là ảnh mặc định (Skip Photo)
+                    if (expense.imagePath.equals("default_placeholder")) {
+                        ivFullPhoto.setImageResource(R.drawable.bg_placeholder_expense);
+                        ivFullPhoto.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                    } else {
+                        // Load ảnh từ đường dẫn vật lý (Internal Storage)
+                        Glide.with(this)
+                                .load(expense.imagePath) // Glide tự hiểu đường dẫn file vật lý
+                                .placeholder(R.drawable.ic_camera) // Hiện màu gradient trong lúc chờ
+                                .error(R.drawable.error_image) // Hiện ảnh lỗi nếu file bị xóa
+                                .centerInside() // Giữ nguyên tỉ lệ ảnh để xem cho rõ
+                                .into(ivFullPhoto);
+                    }
+                } else {
+                    // Trường hợp không có ảnh
+                    ivFullPhoto.setImageResource(R.drawable.bg_placeholder_expense);
+                }
             }
         });
     }
@@ -121,7 +141,7 @@ public class DetailActivity extends AppCompatActivity {
             if (file.exists()) file.delete();
 
             // 2. Xóa trong DB
-            AppDatabase.getDatabase(this).expenseDao().delete(currentExpense);
+            AppDatabase.getInstance(this).expenseDao().delete(currentExpense);
 
             runOnUiThread(() -> {
                 Toast.makeText(this, "Đã xóa!", Toast.LENGTH_SHORT).show();

@@ -37,7 +37,7 @@ public class GalleryActivity extends AppCompatActivity {
         rvGallery.setAdapter(adapter);
 
         // Lấy dữ liệu từ Room
-        AppDatabase.getDatabase(this).expenseDao().getAllExpenses().observe(this, expenses -> {
+        AppDatabase.getInstance(this).expenseDao().getAllExpenses().observe(this, expenses -> {
             if (expenses != null) adapter.setExpenses(expenses);
         });
     }
