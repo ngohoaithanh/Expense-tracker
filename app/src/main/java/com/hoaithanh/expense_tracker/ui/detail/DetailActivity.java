@@ -1,5 +1,6 @@
 package com.hoaithanh.expense_tracker.ui.detail;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -7,6 +8,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -16,8 +18,10 @@ import com.google.android.material.chip.Chip;
 import com.hoaithanh.expense_tracker.R;
 import com.hoaithanh.expense_tracker.data.local.database.AppDatabase;
 import com.hoaithanh.expense_tracker.data.local.entity.Expense;
+import com.hoaithanh.expense_tracker.ui.add.AddExpenseActivity;
 
 import java.io.File;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -42,10 +46,25 @@ public class DetailActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle("Memory Detail");
+            getSupportActionBar().setTitle("Chi tiết");
         }
         toolbar.setNavigationOnClickListener(v -> onBackPressed());
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                finish();
+                overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+            }
+        });
     }
+
+//    @Override
+//    public void onBackPressed() {
+//        super.onBackPressed();
+//        // Khi thoát ra cũng cho mờ dần
+//        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+//    }
 
     // ĐÂY LÀ HÀM BẠN ĐANG THIẾU:
     private void loadData(int id) {
@@ -66,9 +85,10 @@ public class DetailActivity extends AppCompatActivity {
         AppDatabase.getInstance(this).expenseDao().getExpenseById(id).observe(this, expense -> {
             if (expense != null) {
                 currentExpense = expense; // Gán vào biến toàn cục để dùng khi Xóa
+                NumberFormat formatter = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
+                String formattedAmount = formatter.format(expense.amount);
 
-                // Hiển thị dữ liệu lên màn hình
-                tvAmount.setText(String.format("$%.2f", expense.amount));
+                tvAmount.setText(formattedAmount);
                 tvTitle.setText(expense.title.isEmpty() ? "No Title" : expense.title);
                 chipCategory.setText(expense.category);
 
@@ -110,6 +130,15 @@ public class DetailActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.action_delete) {
             confirmDelete();
+            return true;
+        }
+        if (item.getItemId() == R.id.action_edit) {
+            // Gửi dữ liệu sang màn hình Add để sửa
+            Intent intent = new Intent(this, AddExpenseActivity.class);
+            intent.putExtra("IS_EDIT", true);
+            intent.putExtra("EXPENSE_ID", currentExpense.id); // Quan trọng để biết sửa cái nào
+            // Có thể gửi thêm các thông tin khác nếu không muốn load lại DB ở màn hình kia
+            startActivity(intent);
             return true;
         }
         return super.onOptionsItemSelected(item);

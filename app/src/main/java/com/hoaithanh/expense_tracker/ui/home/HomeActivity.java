@@ -8,9 +8,12 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.appbar.AppBarLayout;
+import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -39,6 +42,11 @@ public class HomeActivity extends AppCompatActivity {
     private AppDatabase db;
     private ExtendedFloatingActionButton fabAdd;
     private TextView tvBalance, tvTotalIncome, tvTotalExpense;
+    NestedScrollView nestedScrollView;
+
+    private AppBarLayout appBarLayout;
+    private MaterialToolbar toolbar;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,23 +70,49 @@ public class HomeActivity extends AppCompatActivity {
         fabAdd.setOnClickListener(v -> {
             showAddOptionsSheet();
         });
-//        fabAdd.setOnClickListener(v -> {
-//            Intent intent = new Intent(HomeActivity.this, AddExpenseActivity.class);
-//            // Gửi tín hiệu để AddExpenseActivity tự động bật Camera
-//            intent.putExtra("AUTO_CAMERA", true);
-//            startActivity(intent);
-//        });
-//
-//        fabAdd.setOnLongClickListener(v -> {
-//            Intent intent = new Intent(HomeActivity.this, AddExpenseActivity.class);
-//            // Gửi tín hiệu FALSE để không tự bật Camera, cho phép chọn Gallery hoặc Skip
-//            intent.putExtra("AUTO_CAMERA", false);
-//            startActivity(intent);
-//
-//            // Rung nhẹ một cái để báo cho người dùng biết đã kích hoạt Long Click
-//            v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
-//            return true;
-//        });
+
+        nestedScrollView.setOnScrollChangeListener(new NestedScrollView.OnScrollChangeListener() {
+            @Override
+            public void onScrollChange(NestedScrollView v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
+                // Kiểm tra hướng cuộn
+                if (scrollY > oldScrollY + 12 && fabAdd.isExtended()) {
+                    // Đang cuộn xuống -> Thu nhỏ nút (chỉ còn icon)
+                    fabAdd.shrink();
+                } else if (scrollY < oldScrollY - 12 && !fabAdd.isExtended()) {
+                    // Đang cuộn lên -> Mở rộng nút (hiện chữ "Thêm mới")
+                    fabAdd.extend();
+                }
+
+                // Nếu quay về đầu trang -> Luôn mở rộng nút
+                if (scrollY == 0) {
+                    fabAdd.extend();
+                }
+
+                float alpha = Math.min(1.0f, (float) scrollY / 200.0f);
+
+                // Đổi màu nền của AppBarLayout (ví dụ sang màu trắng hoặc màu Surface)
+                int color = getResources().getColor(R.color.surface); // Hoặc màu trắng
+                appBarLayout.setBackgroundColor(interpolateColor(Color.TRANSPARENT, color, alpha));
+
+                // Thêm bóng đổ (Elevation) khi cuộn xuống
+                if (scrollY > 0) {
+                    appBarLayout.setElevation(4f);
+                } else {
+                    appBarLayout.setElevation(0f);
+                }
+            }
+        });
+    }
+
+    private int interpolateColor(int colorStart, int colorEnd, float fraction) {
+        float[] startHsv = new float[3];
+        float[] endHsv = new float[3];
+        Color.colorToHSV(colorStart, startHsv);
+        Color.colorToHSV(colorEnd, endHsv);
+        for (int i = 0; i < 3; i++) {
+            endHsv[i] = startHsv[i] + (endHsv[i] - startHsv[i]) * fraction;
+        }
+        return Color.HSVToColor((int)(fraction * 255), endHsv);
     }
 
     private void showAddOptionsSheet() {
@@ -124,6 +158,10 @@ public class HomeActivity extends AppCompatActivity {
         tvBalance = findViewById(R.id.tvBalance);
         tvTotalIncome = findViewById(R.id.tvTotalIncome);
         tvTotalExpense = findViewById(R.id.tvTotalExpense);
+
+        nestedScrollView = findViewById(R.id.main_scrollview);
+        appBarLayout = findViewById(R.id.appBarLayout);
+        toolbar = findViewById(R.id.toolbar);
     }
 
     private void observeData() {
@@ -135,7 +173,7 @@ public class HomeActivity extends AppCompatActivity {
 
                 // Cập nhật Adapter với danh sách ListItem mới
                 adapter.setExpenses(displayList);
-
+                rvRecentExpenses.scheduleLayoutAnimation();
                 layoutEmpty.setVisibility(View.GONE);
                 rvRecentExpenses.setVisibility(View.VISIBLE);
 
@@ -157,12 +195,6 @@ public class HomeActivity extends AppCompatActivity {
         // 1. Tính tổng tiền cho từng ngày bằng Map
         Map<String, Long> dateTotals = new HashMap<>();
         SimpleDateFormat compareFmt = new SimpleDateFormat("yyyyMMdd", Locale.getDefault());
-
-//        for (Expense e : expenseList) {
-//            String key = compareFmt.format(new Date(e.timestamp));
-//            long current = dateTotals.getOrDefault(key, 0L);
-//            dateTotals.put(key, current + (long)e.amount); // Ép kiểu nếu e.amount là double
-//        }
 
         for (Expense e : expenseList) {
             String key = compareFmt.format(new Date(e.timestamp));

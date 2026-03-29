@@ -13,5 +13,6 @@
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
         <!-- Customize your theme here. -->
         <item name="android:windowActivityTransitions">true</item>
+        <item name="colorControlHighlight">#C8E6C9</item>
     </style>
 </resources>

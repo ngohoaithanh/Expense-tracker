@@ -1,7 +1,9 @@
 package com.hoaithanh.expense_tracker.ui.home;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -112,9 +114,26 @@ public class HomeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             }
 
             expHolder.itemView.setOnClickListener(v -> {
+                if (position != RecyclerView.NO_POSITION) {
+                    // Giả sử bạn muốn log ra xem đã bấm trúng chưa
+                    Log.d("CLICK_ITEM", "Bạn vừa bấm vào mục vị trí: " + position);
+
+                    // Sau này bạn có thể mở màn hình "Chi tiết chi tiêu" ở đây
+                }
+                v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
                 Intent intent = new Intent(v.getContext(), DetailActivity.class);
                 intent.putExtra("EXPENSE_ID", expense.id);
                 v.getContext().startActivity(intent);
+
+                if (v.getContext() instanceof Activity) {
+                    Activity activity = (Activity) v.getContext();
+
+                    // Dùng hiệu ứng Mờ dần (Fade) - Đảm bảo KHÔNG BÁO ĐỎ
+                    activity.overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+
+                    // HOẶC nếu muốn hiệu ứng trượt sang ngang (Slide) kiểu iPhone:
+                    // activity.overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
+                }
             });
         }
     }
@@ -143,6 +162,7 @@ public class HomeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             tvTitle = itemView.findViewById(R.id.tvTitle);
             tvAmount = itemView.findViewById(R.id.tvAmount);
             chipCategory = itemView.findViewById(R.id.chipCategory);
+
         }
     }
 }

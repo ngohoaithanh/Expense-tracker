@@ -12,19 +12,21 @@
         android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/background"
+        android:background="@android:color/transparent"
         app:elevation="0dp">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:title="Visual Expense"
+            app:title="Sổ chi tiêu"
             app:titleTextColor="@color/on_surface"
+
             app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
+        android:id="@+id/main_scrollview"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
@@ -155,7 +157,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Recent Memories"
+                    android:text="Chi tiêu gần đây"
                     android:textColor="@color/on_surface"
                     android:textSize="20sp"
                     android:textStyle="bold" />
@@ -166,12 +168,13 @@
                     android:layout_height="wrap_content"
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
-                    android:text="See All"
+                    android:text="Tất cả"
                     android:textColor="@color/primary"
                     android:textStyle="bold" />
             </RelativeLayout>
 
             <androidx.recyclerview.widget.RecyclerView
+                android:layoutAnimation="@anim/layout_animation_fall_down"
                 android:id="@+id/rvRecentExpenses"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -201,7 +204,9 @@
                     android:textColor="@color/text_secondary"
                     android:layout_marginTop="16dp" />
             </LinearLayout>
-
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="120dp" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
@@ -215,6 +220,7 @@
         android:layout_gravity="bottom|center_horizontal"
         android:layout_marginBottom="32dp"
         android:text="Thêm mới"
+        app:layout_behavior="com.google.android.material.behavior.HideBottomViewOnScrollBehavior"
         android:textColor="@android:color/white"
         app:icon="@drawable/ic_add"
         app:iconTint="@android:color/white"
