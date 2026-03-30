@@ -1,7 +1,10 @@
 package com.hoaithanh.expense_tracker.ui.add;
 
 import android.Manifest;
+import android.app.ProgressDialog;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
@@ -117,17 +120,6 @@ public class AddExpenseActivity extends AppCompatActivity {
             }
         });
 
-
-        // Nhận tín hiệu từ Home: Có ép mở Camera không?
-//        boolean autoCamera = getIntent().getBooleanExtra("AUTO_CAMERA", true);
-//
-//        if (autoCamera && savedInstanceState == null && currentPhotoPath == null) {
-//            checkCameraPermission(); // Hàm này bên trong sẽ gọi dispatchTakePictureIntent()
-//        } else {
-//            // Nếu là nhập tay, hiện ảnh placeholder để UI không bị trống
-//            ivPreview.setImageResource(R.drawable.bg_placeholder_expense2);
-//        }
-
         // 1. Nhận tín hiệu từ Home (Mặc định là false để an toàn hơn khi Edit)
         boolean autoCamera = getIntent().getBooleanExtra("AUTO_CAMERA", false);
 
@@ -204,6 +196,45 @@ public class AddExpenseActivity extends AppCompatActivity {
             @Override
             public void afterTextChanged(Editable s) {}
         });
+    }
+
+    private File compressImage(Uri imageUri) {
+        try {
+            // 1. Tạo Bitmap từ Uri
+            InputStream inputStream = getContentResolver().openInputStream(imageUri);
+            Bitmap originalBitmap = BitmapFactory.decodeStream(inputStream);
+
+            // 2. Tính toán kích thước mới (Resize)
+            // Giữ nguyên tỷ lệ ảnh, nhưng giới hạn chiều lớn nhất là 1024px
+            int width = originalBitmap.getWidth();
+            int height = originalBitmap.getHeight();
+            float bitmapRatio = (float) width / (float) height;
+            if (bitmapRatio > 1) {
+                width = 1024;
+                height = (int) (width / bitmapRatio);
+            } else {
+                height = 1024;
+                width = (int) (height * bitmapRatio);
+            }
+            Bitmap scaledBitmap = Bitmap.createScaledBitmap(originalBitmap, width, height, true);
+
+            // 3. Tạo file đích để lưu ảnh đã nén
+            String fileName = "IMG_" + System.currentTimeMillis() + ".jpg";
+            File file = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES), fileName);
+
+            // 4. Nén chất lượng (80%) và ghi vào file
+            FileOutputStream out = new FileOutputStream(file);
+            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 80, out);
+
+            out.flush();
+            out.close();
+
+            return file; // Trả về file đã nhẹ đi 20-30 lần
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     private void loadExistingData() {
@@ -594,21 +625,7 @@ public class AddExpenseActivity extends AppCompatActivity {
     private final ActivityResultLauncher<String> pickImageLauncher =
             registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
                 if (uri != null) {
-                    // Lưu Uri vào biến đường dẫn
-//                    currentPhotoPath = uri.toString();
-
-                    String internalPath = saveImageToInternalStorage(uri);
-                    if (internalPath != null) {
-                        // 2. Cập nhật biến đường dẫn để tí nữa lưu Database
-                        currentPhotoPath = internalPath;
-
-                        // 3. Hiển thị ảnh lên giao diện cho người dùng xem
-                        Glide.with(this)
-                                .load(internalPath)
-                                .centerCrop()
-                                .into(ivPreview);
-                        Toast.makeText(this, "Đã chọn ảnh từ thư viện", Toast.LENGTH_SHORT).show();
-                    }
+                    processAndSaveImage(uri);
                 }
             });
 
@@ -647,8 +664,12 @@ public class AddExpenseActivity extends AppCompatActivity {
             registerForActivityResult(new ActivityResultContracts.TakePicture(), result -> {
                 if (result) {
                     // CHỤP THÀNH CÔNG: Hiển thị ảnh lên ivPreview
-                    Glide.with(this).load(currentPhotoPath).into(ivPreview);
+//                    Glide.with(this).load(currentPhotoPath).into(ivPreview);
+                    File rawFile = new File(currentPhotoPath);
+                    Uri uri = Uri.fromFile(rawFile);
 
+                    // 2. Chuyển sang hàm nén (Hàm này sẽ lo việc hiện ảnh lên ImageView sau khi nén xong)
+                    processAndSaveImage(uri);
                     // Senior Tip: Ép hệ thống quét file ảnh mới để tránh bị mất ảnh trong Gallery máy
                     MediaScannerConnection.scanFile(this, new String[]{currentPhotoPath}, null, null);
                 } else {
@@ -658,6 +679,36 @@ public class AddExpenseActivity extends AppCompatActivity {
                 }
             });
 
+    private void processAndSaveImage(Uri uri) {
+        // 1. Hiện thông báo đang xử lý (UX chuyên nghiệp)
+        ProgressDialog pd = new ProgressDialog(this);
+        pd.setMessage("Đang tối ưu dung lượng ảnh...");
+        pd.setCancelable(false); // Tránh người dùng bấm lung tung khi đang nén
+        pd.show();
+
+        new Thread(() -> {
+            // 2. GỌI HÀM NÉN (Hàm bạn đã viết)
+            File compressedFile = compressImage(uri);
+
+            runOnUiThread(() -> {
+                pd.dismiss();
+                if (compressedFile != null) {
+                    // 3. Cập nhật đường dẫn ảnh MỚI (đã nén) vào biến toàn cục
+                    currentPhotoPath = compressedFile.getAbsolutePath();
+
+                    // 4. Hiển thị lên giao diện bằng Glide
+                    Glide.with(this)
+                            .load(compressedFile)
+                            .centerCrop()
+                            .into(ivPreview);
+
+                    Toast.makeText(this, "Ảnh đã được tối ưu!", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(this, "Lỗi khi xử lý ảnh", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }).start();
+    }
     private void dispatchTakePictureIntent() {
         try {
             File photoFile = ImageUtils.createImageFile(this);

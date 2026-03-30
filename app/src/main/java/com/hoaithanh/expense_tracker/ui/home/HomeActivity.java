@@ -15,6 +15,7 @@ import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.facebook.shimmer.ShimmerFrameLayout;
 import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
@@ -50,7 +51,8 @@ public class HomeActivity extends AppCompatActivity {
 
     private AppBarLayout appBarLayout;
     private MaterialToolbar toolbar;
-
+    private ShimmerFrameLayout shimmerHome;
+    private boolean isDataLoaded = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,6 +61,7 @@ public class HomeActivity extends AppCompatActivity {
 
         // 1. Ánh xạ View
         initViews();
+        shimmerHome.startShimmer();
 
         // 2. Cấu hình RecyclerView
         adapter = new HomeAdapter();
@@ -190,6 +193,7 @@ public class HomeActivity extends AppCompatActivity {
         nestedScrollView = findViewById(R.id.main_scrollview);
         appBarLayout = findViewById(R.id.appBarLayout);
         toolbar = findViewById(R.id.toolbar);
+        shimmerHome = findViewById(R.id.shimmerHome);
     }
 
     private void observeData() {
@@ -214,7 +218,26 @@ public class HomeActivity extends AppCompatActivity {
                 // Format tiền theo Locale VN cho đồng bộ
                 tvTotalToday.setText("0 ₫");
             }
+
+            if (!isDataLoaded) {
+                hideShimmerEffect();
+                isDataLoaded = true;
+            }
         });
+    }
+
+    private void hideShimmerEffect() {
+        // Tắt animation và ẩn View Shimmer
+        shimmerHome.stopShimmer();
+        shimmerHome.setVisibility(View.GONE);
+
+        // Hiện layout chính và dùng hiệu ứng Fade-in cho mượt
+        nestedScrollView.setVisibility(View.VISIBLE);
+        nestedScrollView.setAlpha(0f);
+        nestedScrollView.animate()
+                .alpha(1f)
+                .setDuration(400) // 0.4 giây để hiện dần lên
+                .start();
     }
 
     private List<ListItem> groupExpensesByDate(List<Expense> expenseList) {
