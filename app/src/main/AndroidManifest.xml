@@ -30,6 +30,7 @@
         <activity android:name=".ui.calendar.CalendarActivity" />
         <activity android:name=".ui.gallery.GalleryActivity" />
         <activity android:name=".ui.detail.DetailActivity" />
+        <activity android:name=".ui.statics.StatisticsActivity" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

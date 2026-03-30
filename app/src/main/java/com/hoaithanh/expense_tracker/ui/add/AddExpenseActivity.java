@@ -39,6 +39,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -166,21 +167,34 @@ public class AddExpenseActivity extends AppCompatActivity {
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 if (!s.toString().equals(current)) {
-                    // Xóa bỏ listener tạm thời để tránh vòng lặp vô tận
                     etAmount.removeTextChangedListener(this);
 
-                    // Làm sạch chuỗi (chỉ giữ lại số)
+                    // 1. Làm sạch chuỗi (chỉ giữ lại số)
                     String cleanString = s.toString().replaceAll("[^0-9]", "");
 
-                    if (!cleanString.isEmpty()) {
-                        double parsed = Double.parseDouble(cleanString);
+                    if (cleanString.isEmpty() || cleanString.equals("0")) {
+                        current = "";
+                        etAmount.setText("");
+                    } else {
+                        try {
+                            double parsed = Double.parseDouble(cleanString);
 
-                        NumberFormat formatter = NumberFormat.getCurrencyInstance(vietnam);
-                        String formatted = formatter.format(parsed);
+                            // 2. Chỉ định dạng con số (Ví dụ: 1.000.000)
+                            DecimalFormat decimalFormat = (DecimalFormat) NumberFormat.getInstance(vietnam);
+                            decimalFormat.applyPattern("#,###");
+                            String formattedNumber = decimalFormat.format(parsed);
 
-                        current = formatted;
-                        etAmount.setText(formatted);
-                        etAmount.setSelection(formatted.length());
+                            // 3. Tự thêm hậu tố có khoảng trắng để dễ nhìn
+                            current = formattedNumber + " ₫";
+                            etAmount.setText(current);
+
+                            // 4. QUAN TRỌNG: Đưa con trỏ về trước chữ " ₫" (lùi lại 2 ký tự)
+                            int cursorPosition = current.length() - 2;
+                            etAmount.setSelection(Math.max(0, cursorPosition));
+
+                        } catch (NumberFormatException e) {
+                            etAmount.setText("");
+                        }
                     }
 
                     etAmount.addTextChangedListener(this);

@@ -3,6 +3,9 @@ package com.hoaithanh.expense_tracker.ui.home;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.view.HapticFeedbackConstants;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
 
@@ -22,6 +25,7 @@ import com.hoaithanh.expense_tracker.data.local.database.AppDatabase;
 import com.hoaithanh.expense_tracker.data.local.entity.Expense;
 import com.hoaithanh.expense_tracker.model.ListItem;
 import com.hoaithanh.expense_tracker.ui.add.AddExpenseActivity;
+import com.hoaithanh.expense_tracker.ui.statics.StatisticsActivity;
 
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
@@ -71,6 +75,9 @@ public class HomeActivity extends AppCompatActivity {
             showAddOptionsSheet();
         });
 
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+
         nestedScrollView.setOnScrollChangeListener(new NestedScrollView.OnScrollChangeListener() {
             @Override
             public void onScrollChange(NestedScrollView v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
@@ -102,6 +109,27 @@ public class HomeActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.home_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == R.id.action_statistics) {
+            getWindow().getDecorView().performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+            // Mở màn hình thống kê (Activity mới)
+            Intent intent = new Intent(this, StatisticsActivity.class);
+            startActivity(intent);
+
+            // Hiệu ứng chuyển cảnh mượt mà
+            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     private int interpolateColor(int colorStart, int colorEnd, float fraction) {

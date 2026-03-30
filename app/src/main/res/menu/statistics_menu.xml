@@ -1,0 +1,6 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item android:id="@+id/menu_week" android:title="Xem theo Tuần" app:showAsAction="never" />
+    <item android:id="@+id/menu_month" android:title="Xem theo Tháng" app:showAsAction="never" />
+    <item android:id="@+id/menu_year" android:title="Xem theo Năm" app:showAsAction="never" />
+</menu>

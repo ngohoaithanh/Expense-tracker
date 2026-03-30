@@ -159,16 +159,21 @@ public class DetailActivity extends AppCompatActivity {
         if (currentExpense == null) return;
 
         new Thread(() -> {
-            // 1. Xóa file vật lý trước
-            File file = new File(currentExpense.imagePath);
-            if (file.exists()) file.delete();
+            // 1. Kiểm tra xem có đường dẫn ảnh không trước khi tạo File
+            String path = currentExpense.imagePath;
+            if (path != null && !path.isEmpty()) {
+                File file = new File(path);
+                if (file.exists()) {
+                    file.delete();
+                }
+            }
 
-            // 2. Xóa trong DB
+            // 2. Xóa trong DB (Vẫn thực hiện bình thường dù có ảnh hay không)
             AppDatabase.getInstance(this).expenseDao().delete(currentExpense);
 
             runOnUiThread(() -> {
-                Toast.makeText(this, "Đã xóa!", Toast.LENGTH_SHORT).show();
-                finish(); // Quay lại màn hình trước
+                Toast.makeText(this, "Đã xóa thành công!", Toast.LENGTH_SHORT).show();
+                finish();
             });
         }).start();
     }

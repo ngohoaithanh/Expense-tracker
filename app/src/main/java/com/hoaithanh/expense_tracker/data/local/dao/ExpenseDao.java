@@ -8,6 +8,7 @@ import androidx.room.Query;
 import androidx.room.Update;
 
 import com.hoaithanh.expense_tracker.data.local.entity.Expense;
+import com.hoaithanh.expense_tracker.model.CategorySum;
 
 import java.util.List;
 
@@ -36,5 +37,20 @@ public interface ExpenseDao {
 
     @Update
     void update(Expense expense);
+
+    // 1. Tính tổng số tiền theo loại (0: Chi, 1: Thu) trong một khoảng thời gian
+    @Query("SELECT SUM(amount) FROM expenses WHERE type = :type AND timestamp BETWEEN :start AND :end")
+    LiveData<Double> getTotalByType(int type, long start, long end);
+
+    // 2. Thống kê chi tiết: Tên danh mục và Tổng tiền của danh mục đó
+    @Query("SELECT category, SUM(amount) as total FROM expenses " +
+            "WHERE type = 0 AND timestamp BETWEEN :start AND :end " +
+            "GROUP BY category ORDER BY total DESC")
+    LiveData<List<CategorySum>> getExpenseByCategory(long start, long end);
+
+    @Query("SELECT category, SUM(amount) as total FROM expenses " +
+            "WHERE type = :transactionType AND timestamp BETWEEN :start AND :end " +
+            "GROUP BY category ORDER BY total DESC")
+    LiveData<List<CategorySum>> getDataByCategory(int transactionType, long start, long end);
 
 }
