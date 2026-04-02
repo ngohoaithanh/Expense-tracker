@@ -31,6 +31,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
+import com.google.android.material.datepicker.MaterialDatePicker;
 import com.hoaithanh.expense_tracker.R;
 import com.hoaithanh.expense_tracker.data.local.database.AppDatabase;
 import com.hoaithanh.expense_tracker.data.local.entity.Category;
@@ -44,11 +45,14 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 public class AddExpenseActivity extends AppCompatActivity {
     private String currentPhotoPath;
@@ -70,6 +74,9 @@ public class AddExpenseActivity extends AppCompatActivity {
     private boolean isEditMode = false;
     private int editExpenseId = -1;
     private Expense originalExpense; // Lưu lại để lấy imagePath cũ nếu cần
+    private EditText etDate;
+    private long selectedTimestamp = System.currentTimeMillis(); // Mặc định là hôm nay
+    private SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,6 +91,12 @@ public class AddExpenseActivity extends AppCompatActivity {
         chipGroup = findViewById(R.id.chipGroupCategory);
         MaterialButton btnBack = findViewById(R.id.btnBack);
         loadCategoriesFromDb();
+
+        etDate = findViewById(R.id.etDate);
+        // Hiển thị ngày hôm nay mặc định
+        etDate.setText(dateFormat.format(new Date(selectedTimestamp)));
+        etDate.setOnClickListener(v -> showDatePicker());
+
         btnBack.setOnClickListener(v -> {
             v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
             // Kiểm tra xem người dùng đã nhập dữ liệu gì chưa (Tư duy UX)
@@ -198,6 +211,20 @@ public class AddExpenseActivity extends AppCompatActivity {
         });
     }
 
+    private void showDatePicker() {
+        MaterialDatePicker<Long> datePicker = MaterialDatePicker.Builder.datePicker()
+                .setTitleText("Chọn ngày chi tiêu")
+                .setSelection(selectedTimestamp)
+                .build();
+
+        datePicker.addOnPositiveButtonClickListener(selection -> {
+            selectedTimestamp = selection;
+            etDate.setText(dateFormat.format(new Date(selectedTimestamp)));
+        });
+
+        datePicker.show(getSupportFragmentManager(), "DATE_PICKER");
+    }
+
     private File compressImage(Uri imageUri) {
         try {
             // 1. Tạo Bitmap từ Uri
@@ -249,6 +276,9 @@ public class AddExpenseActivity extends AppCompatActivity {
 
                 // 2. Đổ tiêu đề
                 etTitle.setText(expense.title);
+
+                selectedTimestamp = expense.timestamp;
+                etDate.setText(dateFormat.format(new Date(selectedTimestamp)));
 
                 // 3. Thiết lập loại Thu (1) hoặc Chi (0)
                 currentType = expense.type;
@@ -751,46 +781,41 @@ public class AddExpenseActivity extends AppCompatActivity {
             if (isEditMode && originalExpense != null) {
                 // --- CHẾ ĐỘ CẬP NHẬT ---
 
-                // BƯỚC 1: XÓA ẢNH CŨ RÁC (Nếu có)
-                // Điều kiện 1: Đã chụp ảnh mới (currentPhotoPath khác ảnh cũ)
-                if (!currentPhotoPath.equals(originalExpense.imagePath)) {
+                // BƯỚC 1: XỬ LÝ XÓA ẢNH CŨ RÁC (Nếu có thay đổi ảnh)
+                // Dùng Objects.equals để so sánh an toàn kể cả khi 1 trong 2 bị null
+                if (!Objects.equals(currentPhotoPath, originalExpense.imagePath)) {
 
-                    // Điều kiện 2: Ảnh cũ không phải là ảnh mặc định (placeholder)
-                    // Cần so sánh chính xác để tránh xóa file placeholder hệ thống
+                    // Chỉ xóa file nếu path cũ tồn tại, không phải null và không phải placeholder
                     if (originalExpense.imagePath != null && !originalExpense.imagePath.equals("default_placeholder")) {
-
-                        // Tạo đối tượng File từ đường dẫn ảnh cũ
                         File oldFile = new File(originalExpense.imagePath);
-
-                        // Kiểm tra xem file có thực sự tồn tại trên máy không
                         if (oldFile.exists()) {
-                            oldFile.delete(); // Tiến hành xóa file vật lý
-                            // Logcat để bạn debug (tùy chọn)
-                            // Log.d("AddExpense", "Đã xóa ảnh cũ rác: " + originalExpense.imagePath);
+                            oldFile.delete();
                         }
                     }
                 }
 
-                // BƯỚC 2: GÁN GIÁ TRỊ MỚI VÀO ĐỐI TƯỢNG CŨ
+                // BƯỚC 2: GÁN GIÁ TRỊ MỚI
                 originalExpense.title = title;
                 originalExpense.amount = amount;
                 originalExpense.category = selectedCategory;
-                originalExpense.imagePath = currentPhotoPath; // Đây là đường dẫn ảnh MỚI
+                // Đảm bảo imagePath không bao giờ null trong DB
+                originalExpense.imagePath = (currentPhotoPath != null) ? currentPhotoPath : "default_placeholder";
                 originalExpense.type = currentType;
-                // Gán thời gian sửa (System.currentTimeMillis()) vào timestamp nếu bạn muốn
-                // originalExpense.timestamp = System.currentTimeMillis();
+                originalExpense.timestamp = selectedTimestamp;
 
-                // BƯỚC 3: GỌI LỆNH UPDATE TRONG DAO
+                // BƯỚC 3: UPDATE
                 database.expenseDao().update(originalExpense);
 
             } else {
-                // --- CHẾ ĐỘ THÊM MỚI (Code cũ giữ nguyên) ---
+                // --- CHẾ ĐỘ THÊM MỚI ---
+                // Cũng nên handle null cho currentPhotoPath ở đây
+                String finalPath = (currentPhotoPath != null) ? currentPhotoPath : "default_placeholder";
                 Expense newRecord = new Expense(
                         title,
                         amount,
-                        System.currentTimeMillis(),
+                        selectedTimestamp,
                         selectedCategory,
-                        currentPhotoPath,
+                        finalPath,
                         currentType
                 );
                 database.expenseDao().insert(newRecord);
