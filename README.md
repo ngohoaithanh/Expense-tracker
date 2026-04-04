@@ -81,6 +81,7 @@ com.hoaithanh.expense_tracker
 │   ├── home/               # Main Dashboard and Overview
 │   └── statics/            # Analytics and Financial statistics
 └── utils/                  # Helper classes (Currency, Date, Image Compression)
+'''
 
 ### 👨‍💻 Author
 
