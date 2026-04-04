@@ -50,7 +50,7 @@ The app is built as a **Native Android** project using **Java**, leveraging mode
 ### Quick Start
 1. Clone the repository:
    ```bash
-   git clone [https://github.com/ToanPV/ExpenseManager.git](https://github.com/ToanPV/ExpenseManager.git)
+   git clone (https://github.com/ngohoaithanh/Expense-tracker.git)
 
 2. Open the project in Android Studio.
 
@@ -81,8 +81,8 @@ com.hoaithanh.expense_tracker
 │   ├── home/               # Main Dashboard and Overview
 │   └── statics/            # Analytics and Financial statistics
 └── utils/                  # Helper classes (Currency, Date, Image Compression)
-'''
+'''md
 
-### 👨‍💻 Author
+###  👨‍💻 Author
 
     NGO HOAI THANH - Lead Android Developer - [GitHub Profile](https://github.com/ngohoaithanh)
