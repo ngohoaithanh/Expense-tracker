@@ -53,4 +53,7 @@ public interface ExpenseDao {
             "GROUP BY category ORDER BY total DESC")
     LiveData<List<CategorySum>> getDataByCategory(int transactionType, long start, long end);
 
+    @Query("SELECT * FROM expenses WHERE timestamp BETWEEN :start AND :end ORDER BY timestamp DESC")
+    LiveData<List<Expense>> getExpensesByMonth(long start, long end);
+
 }

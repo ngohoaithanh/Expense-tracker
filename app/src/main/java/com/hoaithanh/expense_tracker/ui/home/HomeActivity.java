@@ -1,13 +1,21 @@
 package com.hoaithanh.expense_tracker.ui.home;
 
+import android.app.Dialog;
 import android.content.Intent;
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.view.HapticFeedbackConstants;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.Window;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.widget.Button;
+import android.widget.NumberPicker;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -19,6 +27,8 @@ import com.facebook.shimmer.ShimmerFrameLayout;
 import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.datepicker.MaterialDatePicker;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.hoaithanh.expense_tracker.R;
@@ -27,7 +37,9 @@ import com.hoaithanh.expense_tracker.data.local.entity.Expense;
 import com.hoaithanh.expense_tracker.model.ListItem;
 import com.hoaithanh.expense_tracker.ui.add.AddExpenseActivity;
 import com.hoaithanh.expense_tracker.ui.statics.StatisticsActivity;
+import com.hoaithanh.expense_tracker.utils.DateUtils;
 
+import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -53,6 +65,9 @@ public class HomeActivity extends AppCompatActivity {
     private MaterialToolbar toolbar;
     private ShimmerFrameLayout shimmerHome;
     private boolean isDataLoaded = false;
+    private TextView tvCurrentMonthName, tvMonthSummary;
+    private MaterialButton btnPreviousMonth, btnNextMonth;
+    private Calendar currentViewCalendar = Calendar.getInstance(); // Biến theo dõi tháng
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -112,6 +127,32 @@ public class HomeActivity extends AppCompatActivity {
                 }
             }
         });
+
+        // Nút Tháng sau (Next)
+        btnNextMonth.setOnClickListener(v -> {
+            v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+            currentViewCalendar.add(Calendar.MONTH, 1);
+            runSlideAnimation(true); // Tham số true để trượt sang trái
+        });
+
+        // Nút Tháng trước (Previous)
+        btnPreviousMonth.setOnClickListener(v -> {
+            v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+            currentViewCalendar.add(Calendar.MONTH, -1);
+            runSlideAnimation(false); // Tham số false để trượt sang phải
+        });
+
+        tvCurrentMonthName.setOnClickListener(v -> {
+            v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+            showMonthYearPicker();
+        });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        currentViewCalendar = Calendar.getInstance();
+        observeData();
     }
 
     @Override
@@ -194,29 +235,75 @@ public class HomeActivity extends AppCompatActivity {
         appBarLayout = findViewById(R.id.appBarLayout);
         toolbar = findViewById(R.id.toolbar);
         shimmerHome = findViewById(R.id.shimmerHome);
+
+        tvCurrentMonthName = findViewById(R.id.tvCurrentMonthName);
+        // Nếu bạn có thêm dòng text nhỏ "X giao dịch" thì ánh xạ luôn:
+        tvMonthSummary = findViewById(R.id.tvMonthSummary);
+        btnPreviousMonth = findViewById(R.id.btnPreviousMonth);
+        btnNextMonth = findViewById(R.id.btnNextMonth);
+    }
+
+    private void runSlideAnimation(boolean isNext) {
+        // 1. Khai báo hiệu ứng biến mất và xuất hiện
+        Animation outAnim = AnimationUtils.loadAnimation(this, isNext ? R.anim.slide_out_left : R.anim.slide_out_right);
+        Animation inAnim = AnimationUtils.loadAnimation(this, isNext ? R.anim.slide_in_right : R.anim.slide_in_left);
+        observeData();
+        // 2. Chạy hiệu ứng biến mất cho dữ liệu cũ
+        nestedScrollView.startAnimation(outAnim);
+
+        outAnim.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {}
+
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                // Khi cái cũ đã biến mất -> Tải dữ liệu tháng mới
+
+                // Chạy hiệu ứng xuất hiện cho dữ liệu mới
+                nestedScrollView.startAnimation(inAnim);
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {}
+        });
     }
 
     private void observeData() {
-        // Lấy tất cả chi tiêu và tự động cập nhật UI khi có thay đổi
-        db.expenseDao().getAllExpenses().observe(this, expenses -> {
-            if (expenses != null && !expenses.isEmpty()) {
-                // --- BƯỚC QUAN TRỌNG: Chuyển đổi sang danh sách có nhóm ngày ---
-                List<ListItem> displayList = groupExpensesByDate(expenses);
+        long start = DateUtils.getStartOfMonth(currentViewCalendar);
+        long end = DateUtils.getEndOfMonth(currentViewCalendar);
 
-                // Cập nhật Adapter với danh sách ListItem mới
+        // 1. Hiển thị tên tháng
+        SimpleDateFormat sdf = new SimpleDateFormat("'Tháng 'MM, yyyy", new Locale("vi", "VN"));
+        tvCurrentMonthName.setText(sdf.format(currentViewCalendar.getTime()));
+
+        // 2. Gỡ bỏ observer cũ - Lưu ý: dùng đúng instance LiveData cũ nếu có thể,
+        // hoặc đơn giản nhất là removeObservers trên chính câu query đó.
+        db.expenseDao().getExpensesByMonth(start, end).removeObservers(this);
+
+        db.expenseDao().getExpensesByMonth(start, end).observe(this, expenses -> {
+            // LUÔN LUÔN tính toán lại tổng tiền, kể cả khi danh sách trống (để reset về 0)
+            if (expenses != null) {
+                int count = expenses.size();
+                if (count == 0) {
+                    tvMonthSummary.setText("Chưa có giao dịch nào");
+                } else {
+                    tvMonthSummary.setText(count + " giao dịch trong tháng");
+                }
+            }
+            calculateTotals(expenses != null ? expenses : new ArrayList<>());
+
+            if (expenses != null && !expenses.isEmpty()) {
+                List<ListItem> displayList = groupExpensesByDate(expenses);
                 adapter.setExpenses(displayList);
+
                 rvRecentExpenses.scheduleLayoutAnimation();
                 layoutEmpty.setVisibility(View.GONE);
                 rvRecentExpenses.setVisibility(View.VISIBLE);
-
-                // Vẫn dùng danh sách gốc (expenses) để tính tổng tiền
-                calculateTotals(expenses);
             } else {
+                // Nếu tháng này chưa có gì, xóa sạch danh sách cũ trên Adapter
+                adapter.setExpenses(new ArrayList<>());
                 layoutEmpty.setVisibility(View.VISIBLE);
                 rvRecentExpenses.setVisibility(View.GONE);
-
-                // Format tiền theo Locale VN cho đồng bộ
-                tvTotalToday.setText("0 ₫");
             }
 
             if (!isDataLoaded) {
@@ -224,6 +311,52 @@ public class HomeActivity extends AppCompatActivity {
                 isDataLoaded = true;
             }
         });
+    }
+
+    private void showMonthYearPicker() {
+        final Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.dialog_month_year_picker);
+
+        // Làm cho nền Dialog trong suốt để thấy được bo góc của CardView
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            // Thêm hiệu ứng hiện lên từ từ
+            dialog.getWindow().getAttributes().windowAnimations = android.R.style.Animation_Dialog;
+        }
+
+        NumberPicker monthPicker = dialog.findViewById(R.id.monthPicker);
+        NumberPicker yearPicker = dialog.findViewById(R.id.yearPicker);
+        Button btnConfirm = dialog.findViewById(R.id.btnConfirm);
+        Button btnCancel = dialog.findViewById(R.id.btnCancel);
+
+        // Cấu hình Tháng: Hiện 01, 02 thay vì 1, 2
+        monthPicker.setMinValue(1);
+        monthPicker.setMaxValue(12);
+        monthPicker.setFormatter(i -> String.format("%02d", i));
+        monthPicker.setValue(currentViewCalendar.get(Calendar.MONTH) + 1);
+
+        // Cấu hình Năm
+        int currentYear = Calendar.getInstance().get(Calendar.YEAR);
+        yearPicker.setMinValue(currentYear - 5);
+        yearPicker.setMaxValue(currentYear + 5);
+        yearPicker.setValue(currentViewCalendar.get(Calendar.YEAR));
+
+        btnConfirm.setOnClickListener(v -> {
+            currentViewCalendar.set(Calendar.MONTH, monthPicker.getValue() - 1);
+            currentViewCalendar.set(Calendar.YEAR, yearPicker.getValue());
+
+            // Chuyển cảnh mượt mà
+            nestedScrollView.animate().alpha(0f).scaleX(0.95f).scaleY(0.95f).setDuration(150).withEndAction(() -> {
+                observeData();
+                nestedScrollView.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(200).start();
+            }).start();
+
+            dialog.dismiss();
+        });
+
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+        dialog.show();
     }
 
     private void hideShimmerEffect() {

@@ -15,4 +15,10 @@
         <item name="android:windowActivityTransitions">true</item>
         <item name="colorControlHighlight">#C8E6C9</item>
     </style>
+
+    <style name="NumberPickerStyle">
+        <item name="android:textColorPrimary">@color/primary</item>
+        <item name="android:textColorSecondary">#9E9E9E</item>
+        <item name="colorControlNormal">@color/primary</item>
+    </style>
 </resources>
