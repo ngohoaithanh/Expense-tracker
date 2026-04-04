@@ -31,6 +31,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.datepicker.MaterialDatePicker;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.hoaithanh.expense_tracker.R;
 import com.hoaithanh.expense_tracker.data.local.database.AppDatabase;
 import com.hoaithanh.expense_tracker.data.local.entity.Expense;
@@ -68,6 +69,7 @@ public class HomeActivity extends AppCompatActivity {
     private TextView tvCurrentMonthName, tvMonthSummary;
     private MaterialButton btnPreviousMonth, btnNextMonth;
     private Calendar currentViewCalendar = Calendar.getInstance(); // Biến theo dõi tháng
+    private LinearProgressIndicator budgetProgress;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -241,6 +243,8 @@ public class HomeActivity extends AppCompatActivity {
         tvMonthSummary = findViewById(R.id.tvMonthSummary);
         btnPreviousMonth = findViewById(R.id.btnPreviousMonth);
         btnNextMonth = findViewById(R.id.btnNextMonth);
+
+        budgetProgress = findViewById(R.id.budgetProgress);
     }
 
     private void runSlideAnimation(boolean isNext) {
@@ -271,6 +275,24 @@ public class HomeActivity extends AppCompatActivity {
     private void observeData() {
         long start = DateUtils.getStartOfMonth(currentViewCalendar);
         long end = DateUtils.getEndOfMonth(currentViewCalendar);
+
+        Calendar realTime = Calendar.getInstance();
+        boolean isCurrentMonth = (currentViewCalendar.get(Calendar.MONTH) == realTime.get(Calendar.MONTH)
+                && currentViewCalendar.get(Calendar.YEAR) == realTime.get(Calendar.YEAR));
+
+        // 2. Ẩn/Hiện các thành phần dựa trên thời gian
+        if (isCurrentMonth) {
+            // ĐANG Ở THÁNG HIỆN TẠI: Hiện thanh Progress và các nhãn "Hôm nay"
+            budgetProgress.setVisibility(View.VISIBLE); // Card chứa thanh Progress
+            tvTotalToday.setVisibility(View.VISIBLE); // Chữ "Hôm nay"
+            tvTotalMonth.setVisibility(View.VISIBLE);
+        } else {
+            // ĐANG XEM LỊCH SỬ: Ẩn bớt để giao diện sạch sẽ, tập trung vào danh sách
+            budgetProgress.setVisibility(View.GONE);
+            tvTotalToday.setVisibility(View.GONE);
+            tvTotalMonth.setVisibility(View.GONE);
+
+        }
 
         // 1. Hiển thị tên tháng
         SimpleDateFormat sdf = new SimpleDateFormat("'Tháng 'MM, yyyy", new Locale("vi", "VN"));
@@ -466,5 +488,39 @@ public class HomeActivity extends AppCompatActivity {
         // Dòng Today/Month: Đỏ nếu chi nhiều hơn thu
         tvTotalToday.setTextColor(todayNet >= 0 ? Color.GRAY : Color.RED);
         tvTotalMonth.setTextColor(monthNet >= 0 ? Color.GRAY : Color.RED);
+
+        updateBudgetUI(totalIncome, totalExpense);
+    }
+
+    private void updateBudgetUI(double income, double expense) {
+        if (budgetProgress == null) return;
+
+        // Kiểm tra nếu có thu nhập mới tính toán, tránh chia cho 0
+        if (income > 0) {
+            // Công thức chuẩn: Nhân 100.0 trước để ép kiểu sang Double
+            int percent = (int) ((expense * 100.0) / income);
+
+            // Giới hạn hiển thị tối đa 100%
+            int displayPercent = Math.min(percent, 100);
+
+            // Đặt giá trị cho thanh Progress (có hiệu ứng mượt)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                budgetProgress.setProgress(displayPercent, true);
+            } else {
+                budgetProgress.setProgress(displayPercent);
+            }
+
+            // Thay đổi màu sắc dựa trên % đã tiêu
+            if (percent < 50) {
+                budgetProgress.setIndicatorColor(Color.parseColor("#4CAF50")); // Xanh (An toàn)
+            } else if (percent < 80) {
+                budgetProgress.setIndicatorColor(Color.parseColor("#FFC107")); // Vàng (Cảnh báo)
+            } else {
+                budgetProgress.setIndicatorColor(Color.parseColor("#F44336")); // Đỏ (Nguy hiểm)
+            }
+        } else {
+            // Nếu thu nhập = 0 (hoặc chưa nhập khoản thu nào), thanh phải về 0
+            budgetProgress.setProgress(0);
+        }
     }
 }

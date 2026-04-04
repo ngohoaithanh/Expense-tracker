@@ -178,7 +178,17 @@
                                     android:textStyle="bold" />
                             </LinearLayout>
                         </LinearLayout>
-
+                        <com.google.android.material.progressindicator.LinearProgressIndicator
+                            android:id="@+id/budgetProgress"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:progress="0"
+                            android:indeterminate="false"
+                            app:trackCornerRadius="4dp"
+                            app:trackThickness="8dp"
+                            app:trackColor="#F0F2F5"
+                            app:indicatorColor="@color/primary" />
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -197,7 +207,7 @@
                                 android:id="@+id/tvTotalMonth"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Tháng này: 0"
+                                android:text="Số dư: 0"
                                 android:textSize="12sp" />
                         </LinearLayout>
                     </LinearLayout>
